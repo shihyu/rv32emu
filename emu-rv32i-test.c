@@ -11,8 +11,8 @@ int main(int argc, char** argv) {
     ram_start = 0;
     uint32_t end = 0xfffffffe;
 
-    *(uint*)(ram + start + 0) = 0b00000000101101010000010100110011; // add a0,a0,a1 - S-type reg-reg func7:0, rs2:11, rs1:10, funct3:0, rd:10, opcode:0b0110011 a0=a0+a1
-    *(uint*)(ram + start + 4) = 0b00000000000000001000000001100111; // jal ra  - B-type branch imm:0, rs2:0, rs1:1, funct3:0, opcode:0b1100111, jal ra
+    *(uint*)(ram + start + 0) = 0x00b50533; // 0b00000000101101010000010100110011; // add a0,a0,a1 - S-type reg-reg func7:0, rs2:11, rs1:10, funct3:0, rd:10, opcode:0b0110011 a0=a0+a1
+    *(uint*)(ram + start + 4) = 0x00008067; // 0b00000000000000001000000001100111; // jalr ra  - B-type branch imm:0, rs2:0, rs1:1, funct3:0, opcode:0b1100111, jal ra
 
     pc = start;
     reg[2] = ram_start + RAM_SIZE; // sp - stack pointer
