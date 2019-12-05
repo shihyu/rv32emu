@@ -7,13 +7,12 @@
 
 #define XLEN 32
 
-#include <stdint.h>
+#ifdef DEBUG_OUTPUT
 #include <stdio.h>
-#include <sys/types.h>
+#endif
 
-/* uncomment this for an instruction trace and other debug outputs */
-// #define DEBUG_OUTPUT
-// #define DEBUG_EXTRA
+#include <stdint.h>
+#include <sys/types.h>
 
 #define STRICT_RV32I
 #define FALSE (0)
@@ -723,7 +722,7 @@ int target_read_u8(uint8_t *pval, uint32_t addr)
     addr -= ram_start;
     if (addr > RAM_SIZE) {
         *pval = 0;
-        printf("illegal read 8, PC: 0x%08x, address: 0x%08x\n", pc,
+        debug_out("illegal read 8, PC: 0x%08x, address: 0x%08x\n", pc,
                addr + ram_start);
         return 1;
     } else {
@@ -751,7 +750,7 @@ int target_read_u16(uint16_t *pval, uint32_t addr)
     addr -= ram_start;
     if (addr > RAM_SIZE) {
         *pval = 0;
-        printf("illegal read 16, PC: 0x%08x, address: 0x%08x\n", pc,
+        debug_out("illegal read 16, PC: 0x%08x, address: 0x%08x\n", pc,
                addr + ram_start);
         return 1;
     } else {
@@ -788,7 +787,7 @@ int target_read_u32(uint32_t *pval, uint32_t addr)
         addr -= ram_start;
         if (addr > RAM_SIZE) {
             *pval = 0;
-            printf("illegal read 32, PC: 0x%08x, address: 0x%08x\n", pc,
+            debug_out("illegal read 32, PC: 0x%08x, address: 0x%08x\n", pc,
                    addr + ram_start);
             return 1;
         } else {
@@ -811,11 +810,11 @@ int target_write_u8(uint32_t addr, uint8_t val)
 #endif
     if (addr == UART_TX_ADDR) {
         /* test for UART output, compatible with QEMU */
-        printf("%c", val);
+        debug_out("%c", val);
     } else {
         addr -= ram_start;
         if (addr > RAM_SIZE - 1) {
-            printf("illegal write 8, PC: 0x%08x, address: 0x%08x\n", pc,
+            debug_out("illegal write 8, PC: 0x%08x, address: 0x%08x\n", pc,
                    addr + ram_start);
             return 1;
         } else {
@@ -843,7 +842,7 @@ int target_write_u16(uint32_t addr, uint16_t val)
     }
     addr -= ram_start;
     if (addr > RAM_SIZE - 2) {
-        printf("illegal write 16, PC: 0x%08x, address: 0x%08x\n", pc,
+        debug_out("illegal write 16, PC: 0x%08x, address: 0x%08x\n", pc,
                addr + ram_start);
         return 1;
     } else {
@@ -878,7 +877,7 @@ int target_write_u32(uint32_t addr, uint32_t val)
     } else {
         addr -= ram_start;
         if (addr > RAM_SIZE - 4) {
-            printf("illegal write 32, PC: 0x%08x, address: 0x%08x\n", pc,
+            debug_out("illegal write 32, PC: 0x%08x, address: 0x%08x\n", pc,
                    addr + ram_start);
             return 1;
         } else {

@@ -1,5 +1,10 @@
+// uncomment this for an instruction trace and other debug outputs
+#define DEBUG_OUTPUT
 #define DEBUG_EXTRA
+
 #include "emu-rv32i.h"
+
+#include <stdio.h>
 
 int main(int argc, char** argv) {
     uint32_t start = 0;
@@ -19,13 +24,18 @@ int main(int argc, char** argv) {
     while (machine_running) {
         next_pc = pc + 4;
         insn = get_insn32(pc);
-        debug_out("[%08x]=%08x\n", pc, insn);
+        printf("[%08x]=%08x\n", pc, insn);
         execute_instruction();
         pc = next_pc;
         if (pc == end)
             break;
     }
 
+    #ifdef DEBUG_EXTRA
     dump_regs();
+    #else
+    printf("x10 a0: %08x\n", reg[10]);
+    #endif
+
     return 0;
 }
