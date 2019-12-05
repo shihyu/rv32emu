@@ -1,4 +1,4 @@
-# RISC-V RV32I[MA] emulator to learning with hand assemble
+# RISC-V RV32I[MA] emulator for learning with hand assemble
 
 This is a RISC-V emulator for the RV32I architecture, based on [TinyEMU](https://bellard.org/tinyemu/)
 and stripped down for RV32I only.
