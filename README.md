@@ -26,6 +26,6 @@ see also https://github.com/sysprog21/rv32emu
 
 ## Blog
 
-シンプルなシミュレーターと始める、RISC-Vハンドアセンブルはじめのいっぽ  
+シンプルなシミュレーターとハンドアセンブルで始める、RISC-Vマシン語はじめのいっぽ  
 https://fukuno.jig.jp/2691  
 
