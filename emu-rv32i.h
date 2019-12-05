@@ -7,12 +7,8 @@
 
 #define XLEN 32
 
-#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 
 /* uncomment this for an instruction trace and other debug outputs */

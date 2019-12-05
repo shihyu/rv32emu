@@ -23,3 +23,9 @@ $ brew install riscv-tools
 ## How to use ELF
 
 see also https://github.com/sysprog21/rv32emu  
+
+## Blog
+
+シンプルなシミュレーターと始める、RISC-Vハンドアセンブルはじめのいっぽ  
+https://fukuno.jig.jp/2691  
+

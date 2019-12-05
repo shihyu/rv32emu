@@ -1,3 +1,4 @@
+#define DEBUG_EXTRA
 #include "emu-rv32i.h"
 
 int main(int argc, char** argv) {
