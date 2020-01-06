@@ -709,6 +709,266 @@ uint32_t get_insn32(uint32_t pc)
     return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
 }
 
+/* read 32-bit or 16-bit instruction from memory by PC and set next_pc */
+
+void put_bin(uint n) {
+    for (int i = 0; i < 32; i++) {
+        printf("%d", (n >> (31 - i)) & 1);
+    }
+    printf(" - put_bin\n");
+}
+
+uint32_t convert_insn_from_c(uint16_t ic) {
+    uint32_t insn = 0;
+    uint opcode = ic & 0x3;
+    if (opcode == 0b01) {
+        uint func3 = (ic >> 13) & 0x7;
+        switch (func3) {
+            case 0b001: {
+                uint imm = (ic >> 2) & 0x1f;
+                if ((ic >> 12) & 1) {
+                    imm |= 0xffffffe0;
+                }
+                uint rd = (ic >> 7) & 0x1f;
+                insn = ((imm & 0xfff) << 20) | (rd << 7) | 0b0010011; // addi
+                printf("c.li rd:%d, imm:%d\n", rd, imm);
+                break;
+            }
+            case 0b011: {
+                uint rd = (ic >> 7) & 0x1f;
+                if (rd != 2) {
+                    uint imm = (ic >> 2) & 0x1f;
+                    if ((ic >> 12) & 1) {
+                        imm |= 0xfffe0000;
+                    }
+                    if (imm != 0) {
+                        insn = ((imm & 0xfffff) << 12) | (rd << 7) | 0b0010011; // lui
+                        printf("c.lui rd:%d, imm:%d\n", rd, imm);
+                    }
+                } else {
+                    uint imm = ((ic << 4) & 0b110000000) | ((ic << 1) & 0b1000000) | ((ic << 3) & 0b100000) | ((ic >> 2) & 0b10000);
+                    if ((ic >> 12) & 1) {
+                        imm |= 0xfffffe00;
+                    }
+                    if (imm != 0) {
+                        printf("c.addi16sp %d\n", imm);
+                        insn = ((imm & 0xfff) << 20) | (2 << 15) | (2 << 7) | 0b0010011; // addi
+                    }
+                }
+                break;
+            }
+            case 0b000: {
+                uint imm = (ic >> 2) & 0x1f;
+                if ((ic >> 12) & 1) {
+                    imm |= 0xffffffe0;
+                }
+                uint rd = (ic >> 7) & 0x1f;
+                if (rd != 0) {
+                    insn = ((imm & 0xfff) << 20) | (rd << 15) | (rd << 7) | 0b0010011; // addi
+                    printf("c.addi imm: %d, rd: %d\n", imm, rd);
+                } else {
+                    if (imm == 0) { // nop
+                        insn = 0b0110011; // add x0,x0,x0 ??
+                    }
+                }
+                break;
+            }
+            case 0b101: {
+                uint imm = ((ic >> 1) & (1 << 11)) | ((ic >> 2) & (1 << 10)) | ((ic >> 1) & (3 << 8)) | ((ic << 1) & (1 << 7)) | ((ic >> 1) & (1 << 6)) | ((ic << 3) & (1 << 5)) | ((ic >> 7) & (1 << 4)) | ((ic >> 2) & (7 << 1));
+                if ((ic >> 1) & (1 << 11)) {
+                    imm |= 0xfffff000;
+                }
+                printf("c.j %x(%d)\n", imm, imm);
+                //imm = ~0;
+                insn = ((imm & (1 << 20)) << 11) | ((imm & 0b11111111110) << 20) | ((imm & (1 << 11)) << 9) | (imm & (0xff << 12)) | (0 << 7) | 0b1101111;
+                //printf("%x %x\n", insn, imm);
+                //return 0;
+                break;
+            }
+            case 0b100: {
+                uint func2 = (ic >> 10) & 3;
+                uint rd = ((ic >> 7) & 7) + 8;
+                if (func2 == 0b11) {
+                    uint rm = ((ic >> 2) & 7) + 8;
+                    uint func22 = (ic >> 5) & 3;
+                    switch (func22) {
+                        case 0b00: {
+                            printf("c.sub %d, %d\n", rd, rm);
+                            insn = (0b0100000 << 25) | (rm << 20) | (rd << 15) | (0b000 << 12) | (rd << 7) | 0b0110011;
+                            break;
+                        }
+                        case 0b11: {
+                            printf("c.and %d, %d\n", rd, rm);
+                            insn = (rm << 20) | (rd << 15) | (0b111 << 12) | (rd << 7) | 0b0110011;
+                            break;
+                        }
+                        case 0b10: {
+                            printf("c.or %d, %d\n", rd, rm);
+                            insn = (rm << 20) | (rd << 15) | (0b110 << 12) | (rd << 7) | 0b0110011;
+                            break;
+                        }
+                        case 0b01: {
+                            printf("c.xor %d, %d\n", rd, rm);
+                            insn = (rm << 20) | (rd << 15) | (0b100 << 12) | (rd << 7) | 0b0110011;
+                            break;
+                        }
+                    }
+                } else {
+                    uint imm = ((ic >> 7) & (1 << 5)) | ((ic >> 2) & 0x1f);
+                    switch (func2) {
+                        case 0b00: {
+                            printf("c.srli %d, %d\n", rd, imm);
+                            insn = (imm << 20) | (rd << 15) | (0b101 << 12) | (rd << 7) | 0b0010011;
+                            break;
+                        }
+                        case 0b01: {
+                            printf("c.srai %d, %d\n", rd, imm);
+                            insn = (0b010000 << 26) | (imm << 20) | (rd << 15) | (0b101 << 12) | (rd << 7) | 0b0010011;
+                            break;
+                        }
+                        case 0b10: {
+                            if (imm & (1 << 5)) {
+                                imm |= 0xffffffc0;
+                            }
+                            printf("c.andi %d, %d\n", rd, imm);
+                            insn = ((imm & 0xfff) << 20) | (rd << 15) | (0b111 << 12) | (rd << 7) | 0b0010011; // andi
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            case 0b110:
+            case 0b111: {
+                uint zflg = (ic >> 13) & 1;
+                uint rs1 = ((ic >> 7) & 7) + 8;
+                uint imm = ((ic << 1) & 0b11000000) | ((ic << 3) & 0b100000) | ((ic >> 7) & 0b11000) | ((ic >> 2) & 0b110);
+                if ((ic >> 12) & 1) {
+                    imm |= 0xffffff00;
+                }
+                if (!zflg) {
+                    printf("c.beqz rs:%d, %d\n", rs1, imm);
+                    uint rs2 = 0;
+                    insn = ((imm & (1 << 12)) << 19) | ((imm & 0b11111100000) << 20) | (rs2 << 20) | (rs1 << 15) | (0b000 << 12) | ((imm & 0b11110) << 7) | ((imm & (1 << 11)) >> 4) | 0b1100011; // beq
+                } else {
+                    printf("c.bnez rs:%d, %d\n", rs1, imm);
+                    uint rs2 = 0;
+                    insn = ((imm & (1 << 12)) << 19) | ((imm & 0b11111100000) << 20) | (rs2 << 20) | (rs1 << 15) | (0b001 << 12) | ((imm & 0b11110) << 7) | ((imm & (1 << 11)) >> 4) | 0b1100011; // bne
+                    printf("bne %x %x\n", insn, imm);
+                }
+                break;
+            }
+        }
+    } else if (opcode == 0b10) {
+        uint func4 = (ic >> 12) & 0xf;
+        switch (func4) {
+            case 0b1000: {
+                uint rd = (ic >> 7) & 0x1f;
+                uint rm = (ic >> 2) & 0x1f;
+                if (rm != 0) { // c.mv rd = rm -> add rd, x0, rs
+                    insn = (rm << 20) | (rd << 7) | 0b0110011;
+                    printf("c.mv %d, %d\n", rd, rm);
+                } else { // c.jr rd
+                    insn = (rd << 15) | 0b1100111;
+                    printf("c.jr %d\n", rd);
+                }
+                break;
+            }
+            case 0b1001: {
+                uint rd = (ic >> 7) & 0x1f;
+                uint rm = (ic >> 2) & 0x1f;
+                if (rm != 0) { // c.add rd,rm -> add rd, rd, rm
+                    insn = (rm << 20) | (rd << 15) | 0 | (rd << 7) | 0b0110011;
+                    printf("c.add %d, %d\n", rd, rm);
+                } else if (rd != 0) { // c.jalr rd
+                    insn = (rd << 15) | (1 << 7) | 0b1100111;
+                    printf("c.jalr %d\n", rd);
+                } else { // c.ebreak
+                    insn = (1 << 20) | 0b1110011;
+                    printf("c.ebreak\n");
+                }
+                break;
+            }
+            case 0b0000:
+            case 0b0001: {
+                uint imm = ((ic >> 7) & (1 << 5)) | ((ic >> 2) & 0x1f);
+                uint rd = (ic >> 7) & 0x1f;
+                printf("c.slli %d, %d\n", rd, imm);
+                insn = (imm << 20) | (rd << 15) | (0b001 << 12) | (rd << 7) | 0b0010011;
+                break;
+            }
+            case 0b1100:
+            case 0b1101: {
+                uint imm = ((ic >> 1) & 0b11000000) | ((ic >> 7) & 0b111100);
+                uint rs2 = (ic >> 2) & 0x1f;
+                uint rs1 = 2;
+                printf("c.swsp %d, %d\n", rs2, imm); // -> sw rs2, umm(x2)
+                insn = ((imm << 20) & 0x7f) | (rs2 << 20) | (rs1 << 15) | (0b010 << 12) | ((imm << 7) & 0x1f) | 0b0100011; // sw
+                break;
+            }
+            case 0b0100:
+            case 0b0101: {
+                uint imm = ((ic << 4) & 0b11000000) | ((ic >> 7) & 0b100000) | ((ic >> 2) & 0b11100);
+                uint rd = (ic >> 7) & 0x1f;
+                if (rd != 0) {
+                    printf("c.lwsp %d, %d\n", rd, imm); // -> lw rd, umm(x2)
+                    uint rn = 2;
+                    insn = ((imm & 0xfff) << 20) | (rn << 15) | (0b010 << 12) | (rd << 7) | 0b0000011; // lw
+                }
+                break;
+            }
+        }
+    } else if (opcode == 0b00) {
+        uint func3 = (ic >> 13) & 0x7;
+        if (func3 == 0b000) { // 
+            uint rd = ((ic >> 2) & 0x1f) + 8;
+            uint imm = ((ic >> 1) & 0b1111000000) | ((ic >> 7) & 0b110000) | ((ic >> 2) & 0b1000) | ((ic >> 4) & 0b100);
+            printf("c.addi4spn %d %d\n", rd, imm); // -> addi rd, x2, imm
+            insn = (imm << 20) | (2 << 15) | (rd << 7) | 0b0010011; // addi
+        } else {
+            uint rd = ((ic >> 2) & 0x1f) + 8; // rs2
+            uint rn = ((ic >> 7) & 0x1f) + 8; // rs1
+            uint imm = ((ic >> 7) & 0b111000) | ((ic >> 4) & 0x4);
+            if ((ic << 1) & 1) {
+                imm |= 0xffffff80;
+            }
+            if (func3 == 0b110) {
+                insn = ((imm << 20) & 0x7f) | (rd << 20) | (rn << 15) | (0b010 << 12) | ((imm << 7) & 0x1f) | 0b0100011; // sw
+                printf("c.sw imm: %d, rs1: %d, rs2: %d\n", imm, rn, rd);
+            } else if (func3 == 0b010) {
+                insn = ((imm & 0xfff) << 20) | (rn << 15) | (0b010 << 12) | (rd << 7) | 0b0000011; // lw
+                printf("c.lw imm: %d, rs1: %d, rs2: %d\n", imm, rn, rd);
+            }
+        }
+    }
+    return insn;
+}
+
+uint32_t get_insn(uint32_t pc)
+{
+#ifdef DEBUG_EXTRA
+    if (pc && pc < minmemr)
+        minmemr = pc;
+    if (pc + 3 > maxmemr)
+        maxmemr = pc + 3;
+#endif
+    uint32_t ptr = pc - ram_start;
+    if (ptr > RAM_SIZE)
+        return 1;
+    uint8_t *p = ram + ptr;
+    uint32_t insn = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
+
+    if ((insn & 3) == 3) {
+        next_pc = pc + 4;
+        return insn;
+    }
+    next_pc = pc + 2;
+    uint ic = insn & 0xffff;
+    insn = convert_insn_from_c(ic);
+    printf("C op %04x -> %08x\n", ic, insn);
+    return insn;
+}
+
 /* read 8-bit data from memory */
 
 int target_read_u8(uint8_t *pval, uint32_t addr)
