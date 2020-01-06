@@ -13,6 +13,16 @@ Run:
 $ ./emu-rv32i-test
 ```
 
+How to compile it: (RV32C)
+```shell
+$ gcc -O3 -Wall emu-rv32i-test-c.c -o emu-rv32i-test-c
+```
+
+Run:
+```shell
+$ ./emu-rv32i-test-c
+```
+
 ## How to build RISC-V toolchain on MacOS
 
 ```shell
